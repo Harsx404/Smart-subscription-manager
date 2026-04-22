@@ -1,0 +1,49 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'models/subscription.dart';
+import 'providers/subscription_provider.dart';
+import 'screens/add_subscription_screen.dart';
+import 'screens/edit_subscription_screen.dart';
+import 'screens/splash_screen.dart';
+import 'services/notification_service.dart';
+import 'utils/app_theme.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.initialize();
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => SubscriptionProvider(),
+      child: const MyApp(),
+    ),
+  );
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Smart Subscription Manager',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
+      home: const SplashScreen(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/add') {
+          return MaterialPageRoute(
+              builder: (_) => const AddSubscriptionScreen());
+        }
+        if (settings.name == '/edit') {
+          final sub = settings.arguments as Subscription;
+          return MaterialPageRoute(
+              builder: (_) => EditSubscriptionScreen(subscription: sub));
+        }
+        return null;
+      },
+    );
+  }
+}
+
