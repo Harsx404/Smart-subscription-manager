@@ -1,4 +1,4 @@
-# appone
+# Smart Subscription Manager
 
 A new Flutter project.
 
