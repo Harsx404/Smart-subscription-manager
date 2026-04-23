@@ -253,7 +253,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Bar chart card
+                // Bar chart card — Monthly Cost per Category
                 Container(
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardTheme.color,
@@ -271,99 +271,179 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             .titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        height: 240, // Increased height
-                        child: BarChart(
-                          BarChartData(
-                            alignment: BarChartAlignment.spaceAround,
-                            maxY: values.isEmpty
-                                ? 100
-                                : values.reduce((a, b) => a > b ? a : b) * 1.3, // Increased overhead
-                            barGroups: List.generate(categories.length, (i) {
-                              return BarChartGroupData(
-                                x: i,
-                                barRods: [
-                                  BarChartRodData(
-                                    toY: values[i],
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        _chartColors[i % _chartColors.length].withValues(alpha: 0.6),
-                                        _chartColors[i % _chartColors.length],
-                                      ],
-                                      begin: Alignment.bottomCenter,
-                                      end: Alignment.topCenter,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap a bar to see details',
+                        style: TextStyle(fontSize: 12, color: cs.outline),
+                      ),
+                      const SizedBox(height: 24),
+                      // Horizontal scroll so many categories never overflow
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          // Each category gets 64px wide slot; minimum fills the card
+                          width: (categories.length * 64.0).clamp(
+                            MediaQuery.of(context).size.width - 72,
+                            double.infinity,
+                          ),
+                          height: 260,
+                          child: BarChart(
+                            BarChartData(
+                              alignment: BarChartAlignment.spaceAround,
+                              maxY: values.isEmpty
+                                  ? 100
+                                  : values.reduce((a, b) => a > b ? a : b) * 1.4,
+                              barGroups: List.generate(categories.length, (i) {
+                                final maxVal = values.reduce((a, b) => a > b ? a : b);
+                                return BarChartGroupData(
+                                  x: i,
+                                  barRods: [
+                                    BarChartRodData(
+                                      toY: values[i],
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          _chartColors[i % _chartColors.length].withValues(alpha: 0.55),
+                                          _chartColors[i % _chartColors.length],
+                                        ],
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                      ),
+                                      width: categories.length <= 4 ? 32 : 22,
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                                      backDrawRodData: BackgroundBarChartRodData(
+                                        show: true,
+                                        toY: maxVal * 1.4,
+                                        color: isDark
+                                            ? const Color(0xFF334155).withValues(alpha: 0.25)
+                                            : const Color(0xFFF1F5F9),
+                                      ),
                                     ),
-                                    width: 24,
-                                    borderRadius: BorderRadius.circular(6),
-                                    backDrawRodData: BackgroundBarChartRodData(
-                                      show: true,
-                                      toY: values.reduce((a, b) => a > b ? a : b) * 1.3,
-                                      color: isDark ? const Color(0xFF334155).withValues(alpha: 0.3) : const Color(0xFFF1F5F9),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }),
-                            titlesData: FlTitlesData(
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 36, // Added reservedSize
-                                  getTitlesWidget: (v, _) {
-                                    final idx = v.toInt();
-                                    if (idx >= 0 && idx < categories.length) {
+                                  ],
+                                  // Value label above the bar
+                                  showingTooltipIndicators: [],
+                                );
+                              }),
+                              titlesData: FlTitlesData(
+                                bottomTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 52,
+                                    getTitlesWidget: (v, meta) {
+                                      final idx = v.toInt();
+                                      if (idx < 0 || idx >= categories.length) {
+                                        return const SizedBox();
+                                      }
+                                      final emoji = AppConstants.categoryIcons[categories[idx]] ?? '📦';
+                                      // Abbreviate long names
+                                      final name = categories[idx].length > 9
+                                          ? '${categories[idx].substring(0, 8)}…'
+                                          : categories[idx];
                                       return Padding(
-                                        padding: const EdgeInsets.only(top: 8),
-                                        child: Text(
-                                          AppConstants.categoryIcons[categories[idx]] ?? '📦',
-                                          style: const TextStyle(fontSize: 18),
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(emoji, style: const TextStyle(fontSize: 16)),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              name,
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                color: cs.outline,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       );
-                                    }
-                                    return const SizedBox();
-                                  },
+                                    },
+                                  ),
+                                ),
+                                leftTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 44,
+                                    getTitlesWidget: (v, meta) {
+                                      if (v == 0 || v == meta.max) return const SizedBox();
+                                      return Text(
+                                        v >= 1000
+                                            ? '${(v / 1000).toStringAsFixed(1)}k'
+                                            : v.toInt().toString(),
+                                        style: TextStyle(fontSize: 10, color: cs.outline),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                topTitles: AxisTitles(
+                                  sideTitles: SideTitles(
+                                    showTitles: true,
+                                    reservedSize: 28,
+                                    getTitlesWidget: (v, meta) {
+                                      final idx = v.toInt();
+                                      if (idx < 0 || idx >= values.length) return const SizedBox();
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 4),
+                                        child: Text(
+                                          '$currency${values[idx].toStringAsFixed(0)}',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: _chartColors[idx % _chartColors.length],
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 40,
-                                  getTitlesWidget: (v, _) {
-                                    if (v == 0) return const SizedBox();
-                                    return Text(
-                                      v.toInt().toString(),
-                                      style: TextStyle(fontSize: 10, color: cs.outline),
+                              borderData: FlBorderData(show: false),
+                              gridData: FlGridData(
+                                show: true,
+                                drawVerticalLine: false,
+                                getDrawingHorizontalLine: (value) => FlLine(
+                                  color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                                  strokeWidth: 1,
+                                  dashArray: [4, 4],
+                                ),
+                              ),
+                              barTouchData: BarTouchData(
+                                touchTooltipData: BarTouchTooltipData(
+                                  getTooltipColor: (_) =>
+                                      isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  tooltipRoundedRadius: 12,
+                                  tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                    final cat = categories[group.x.toInt()];
+                                    final pct = total > 0 ? (rod.toY / total * 100) : 0.0;
+                                    return BarTooltipItem(
+                                      '${AppConstants.categoryIcons[cat] ?? '📦'} $cat\n',
+                                      TextStyle(
+                                        color: cs.onSurface,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text: '$currency${rod.toY.toStringAsFixed(2)}/mo  ',
+                                          style: TextStyle(
+                                            color: _chartColors[group.x.toInt() % _chartColors.length],
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: '(${pct.toStringAsFixed(1)}%)',
+                                          style: TextStyle(
+                                            color: cs.outline,
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
                                     );
                                   },
                                 ),
-                              ),
-                              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            ),
-                            borderData: FlBorderData(show: false),
-                            gridData: FlGridData(
-                              show: true,
-                              drawVerticalLine: false,
-                              getDrawingHorizontalLine: (value) => FlLine(
-                                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                                strokeWidth: 1,
-                                dashArray: [4, 4],
-                              ),
-                            ),
-                            barTouchData: BarTouchData(
-                              touchTooltipData: BarTouchTooltipData(
-                                getTooltipColor: (_) => isDark ? const Color(0xFF1E293B) : Colors.white,
-                                getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                  return BarTooltipItem(
-                                    '$currency${rod.toY.toStringAsFixed(0)}',
-                                    TextStyle(
-                                      color: cs.onSurface,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  );
-                                },
                               ),
                             ),
                           ),
