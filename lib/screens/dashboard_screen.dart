@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/theme_provider.dart';
 import '../widgets/spending_summary_card.dart';
 import '../widgets/subscription_card.dart';
 import '../widgets/upcoming_payment_card.dart';
 import 'analytics_screen.dart';
 import 'settings_screen.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -74,14 +76,26 @@ class _HomeTab extends StatelessWidget {
     return CustomScrollView(
       slivers: [
         SliverAppBar.large(
-          title: const Text('My Subscriptions'),
+          title: const Text(
+            'My Subscriptions',
+            style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+          ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add),
-              tooltip: 'Add subscription',
-              onPressed: () => Navigator.pushNamed(context, '/add'),
+              icon: Icon(
+                Theme.of(context).brightness == Brightness.dark
+                    ? Icons.light_mode
+                    : Icons.dark_mode,
+              ),
+              onPressed: () {
+                context.read<ThemeProvider>().toggleTheme();
+              },
             ),
+            const SizedBox(width: 8),
           ],
+          pinned: true,
+          scrolledUnderElevation: 0,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
         ),
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -115,7 +129,7 @@ class _HomeTab extends StatelessWidget {
               else
                 ...allSubs.map((s) => SubscriptionCard(subscription: s)),
               const SizedBox(height: 88),
-            ]),
+            ].animate(interval: 60.ms).fadeIn(duration: 500.ms, curve: Curves.easeOutQuad).slideY(begin: 0.1, duration: 500.ms, curve: Curves.easeOutQuad)),
           ),
         ),
       ],

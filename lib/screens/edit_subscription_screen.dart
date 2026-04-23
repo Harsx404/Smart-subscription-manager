@@ -10,8 +10,7 @@ class EditSubscriptionScreen extends StatefulWidget {
   const EditSubscriptionScreen({super.key, required this.subscription});
 
   @override
-  State<EditSubscriptionScreen> createState() =>
-      _EditSubscriptionScreenState();
+  State<EditSubscriptionScreen> createState() => _EditSubscriptionScreenState();
 }
 
 class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
@@ -73,8 +72,9 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
           : _notesController.text.trim(),
     );
 
-    await context.read<SubscriptionProvider>().updateSubscription(updated);
-    if (mounted) {
+    try {
+      await context.read<SubscriptionProvider>().updateSubscription(updated);
+      if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -82,6 +82,18 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not update subscription: $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 
@@ -122,8 +134,7 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
                     initialValue: _currency,
                     decoration: const InputDecoration(labelText: 'Currency'),
                     items: AppConstants.currencies
-                        .map((c) =>
-                            DropdownMenuItem(value: c, child: Text(c)))
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
                     onChanged: (v) => setState(() => _currency = v!),
                   ),
@@ -137,7 +148,8 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
                     keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                      decimal: true,
+                    ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Cost is required';
                       if (double.tryParse(v) == null) return 'Invalid number';
@@ -157,9 +169,13 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
               ),
               items: const [
                 DropdownMenuItem(
-                    value: BillingCycle.monthly, child: Text('Monthly')),
+                  value: BillingCycle.monthly,
+                  child: Text('Monthly'),
+                ),
                 DropdownMenuItem(
-                    value: BillingCycle.yearly, child: Text('Yearly')),
+                  value: BillingCycle.yearly,
+                  child: Text('Yearly'),
+                ),
               ],
               onChanged: (v) => setState(() => _billingCycle = v!),
             ),
@@ -171,16 +187,18 @@ class _EditSubscriptionScreenState extends State<EditSubscriptionScreen> {
                 prefixIcon: Icon(Icons.category_outlined),
               ),
               items: AppConstants.categories
-                  .map((c) => DropdownMenuItem(
-                        value: c,
-                        child: Row(
-                          children: [
-                            Text(AppConstants.categoryIcons[c] ?? '📦'),
-                            const SizedBox(width: 8),
-                            Text(c),
-                          ],
-                        ),
-                      ))
+                  .map(
+                    (c) => DropdownMenuItem(
+                      value: c,
+                      child: Row(
+                        children: [
+                          Text(AppConstants.categoryIcons[c] ?? '📦'),
+                          const SizedBox(width: 8),
+                          Text(c),
+                        ],
+                      ),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _category = v!),
             ),

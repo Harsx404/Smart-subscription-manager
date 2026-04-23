@@ -60,8 +60,9 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
       createdAt: DateTime.now(),
     );
 
-    await context.read<SubscriptionProvider>().addSubscription(sub);
-    if (mounted) {
+    try {
+      await context.read<SubscriptionProvider>().addSubscription(sub);
+      if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,6 +70,18 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save subscription: $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 
@@ -148,8 +161,7 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
               labelText: 'Cost',
               prefixIcon: Icon(Icons.payments_outlined),
             ),
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (v) {
               if (v == null || v.isEmpty) return 'Cost is required';
               if (double.tryParse(v) == null) return 'Enter a valid number';
@@ -170,10 +182,8 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
         prefixIcon: Icon(Icons.repeat_rounded),
       ),
       items: const [
-        DropdownMenuItem(
-            value: BillingCycle.monthly, child: Text('Monthly')),
-        DropdownMenuItem(
-            value: BillingCycle.yearly, child: Text('Yearly')),
+        DropdownMenuItem(value: BillingCycle.monthly, child: Text('Monthly')),
+        DropdownMenuItem(value: BillingCycle.yearly, child: Text('Yearly')),
       ],
       onChanged: (v) => setState(() => _billingCycle = v!),
     );
@@ -187,16 +197,18 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
         prefixIcon: Icon(Icons.category_outlined),
       ),
       items: AppConstants.categories
-          .map((c) => DropdownMenuItem(
-                value: c,
-                child: Row(
-                  children: [
-                    Text(AppConstants.categoryIcons[c] ?? '📦'),
-                    const SizedBox(width: 8),
-                    Text(c),
-                  ],
-                ),
-              ))
+          .map(
+            (c) => DropdownMenuItem(
+              value: c,
+              child: Row(
+                children: [
+                  Text(AppConstants.categoryIcons[c] ?? '📦'),
+                  const SizedBox(width: 8),
+                  Text(c),
+                ],
+              ),
+            ),
+          )
           .toList(),
       onChanged: (v) => setState(() => _category = v!),
     );

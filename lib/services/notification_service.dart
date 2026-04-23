@@ -5,11 +5,18 @@ import '../models/subscription.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
+  static const _remindersPerSubscription = 3;
+  static const _maxAndroidNotificationId = 0x7fffffff;
+  static const _maxNotificationGroup =
+      (_maxAndroidNotificationId - (_remindersPerSubscription - 1)) ~/
+      _remindersPerSubscription;
 
   static Future<void> initialize() async {
     tz.initializeTimeZones();
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const initSettings = InitializationSettings(android: androidSettings);
 
     await _plugin.initialize(initSettings);
@@ -17,7 +24,8 @@ class NotificationService {
     // Request permission on Android 13+
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
   }
 
@@ -29,39 +37,43 @@ class NotificationService {
     priority: Priority.high,
   );
 
-  static Future<void> scheduleSubscriptionReminders(
-      Subscription sub) async {
-    await cancelSubscriptionReminders(sub.id);
-    if (!sub.isActive) return;
+  static Future<void> scheduleSubscriptionReminders(Subscription sub) async {
+    try {
+      await cancelSubscriptionReminders(sub.id);
+      if (!sub.isActive) return;
 
-    final daysUntil = sub.daysUntilBilling;
+      final baseId = _baseNotificationId(sub.id);
+      final daysUntil = sub.daysUntilBilling;
 
-    if (daysUntil >= 3) {
-      await _schedule(
-        id: sub.id.hashCode.abs() * 3,
-        title: 'Upcoming Subscription',
-        body: 'Your ${sub.name} subscription renews in 3 days.',
-        date: sub.nextBillingDate.subtract(const Duration(days: 3)),
-      );
-    }
+      if (daysUntil >= 3) {
+        await _schedule(
+          id: baseId,
+          title: 'Upcoming Subscription',
+          body: 'Your ${sub.name} subscription renews in 3 days.',
+          date: sub.nextBillingDate.subtract(const Duration(days: 3)),
+        );
+      }
 
-    if (daysUntil >= 1) {
-      await _schedule(
-        id: sub.id.hashCode.abs() * 3 + 1,
-        title: 'Subscription Due Tomorrow',
-        body:
-            '${sub.name} will charge ${sub.currency} ${sub.cost.toStringAsFixed(2)} tomorrow.',
-        date: sub.nextBillingDate.subtract(const Duration(days: 1)),
-      );
-    }
+      if (daysUntil >= 1) {
+        await _schedule(
+          id: baseId + 1,
+          title: 'Subscription Due Tomorrow',
+          body:
+              '${sub.name} will charge ${sub.currency} ${sub.cost.toStringAsFixed(2)} tomorrow.',
+          date: sub.nextBillingDate.subtract(const Duration(days: 1)),
+        );
+      }
 
-    if (daysUntil >= 0) {
-      await _schedule(
-        id: sub.id.hashCode.abs() * 3 + 2,
-        title: 'Billing Due Today',
-        body: '${sub.name} billing is due today.',
-        date: sub.nextBillingDate,
-      );
+      if (daysUntil >= 0) {
+        await _schedule(
+          id: baseId + 2,
+          title: 'Billing Due Today',
+          body: '${sub.name} billing is due today.',
+          date: sub.nextBillingDate,
+        );
+      }
+    } catch (_) {
+      // Reminder scheduling should never block saving the subscription.
     }
   }
 
@@ -90,9 +102,21 @@ class NotificationService {
   }
 
   static Future<void> cancelSubscriptionReminders(String subId) async {
-    final base = subId.hashCode.abs() * 3;
-    await _plugin.cancel(base);
-    await _plugin.cancel(base + 1);
-    await _plugin.cancel(base + 2);
+    final base = _baseNotificationId(subId);
+    for (var offset = 0; offset < _remindersPerSubscription; offset++) {
+      try {
+        await _plugin.cancel(base + offset);
+      } catch (_) {
+        // Ignore cancellation failures so edits and saves can proceed.
+      }
+    }
+  }
+
+  static int _baseNotificationId(String subscriptionId) {
+    var hash = 0;
+    for (final codeUnit in subscriptionId.codeUnits) {
+      hash = ((hash * 31) + codeUnit) & _maxAndroidNotificationId;
+    }
+    return (hash % (_maxNotificationGroup + 1)) * _remindersPerSubscription;
   }
 }

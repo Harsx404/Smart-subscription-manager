@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class SpendingSummaryCard extends StatelessWidget {
   final double monthly;
@@ -16,17 +17,26 @@ class SpendingSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [colorScheme.primary, colorScheme.tertiary],
+          colors: isDark 
+              ? [const Color(0xFF4F46E5), const Color(0xFF3730A3)]
+              : [const Color(0xFF4F46E5), const Color(0xFF6366F1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,23 +45,23 @@ class SpendingSummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Monthly Spending',
+                'Total Monthly Spending',
                 style: TextStyle(
-                  color: colorScheme.onPrimary.withValues(alpha: 0.85),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: colorScheme.onPrimary.withValues(alpha: 0.18),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '$count active',
-                  style: TextStyle(
-                    color: colorScheme.onPrimary,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -59,31 +69,32 @@ class SpendingSummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             '$currency ${monthly.toStringAsFixed(2)}',
-            style: TextStyle(
-              color: colorScheme.onPrimary,
-              fontSize: 34,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 36,
               fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+              letterSpacing: -1,
             ),
+          ).animate().shimmer(delay: 1000.ms, duration: 1500.ms, color: Colors.white.withValues(alpha: 0.4)),
+          const SizedBox(height: 20),
+          Container(
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.15),
           ),
           const SizedBox(height: 16),
-          Divider(color: colorScheme.onPrimary.withValues(alpha: 0.2)),
-          const SizedBox(height: 12),
           Row(
             children: [
               _Stat(
-                label: 'Yearly Total',
+                label: 'Yearly Projection',
                 value: '$currency ${yearly.toStringAsFixed(2)}',
-                onPrimary: colorScheme.onPrimary,
               ),
               const Spacer(),
               _Stat(
-                label: 'Per Day',
+                label: 'Average Per Day',
                 value: '$currency ${(monthly / 30).toStringAsFixed(2)}',
-                onPrimary: colorScheme.onPrimary,
                 alignEnd: true,
               ),
             ],
@@ -97,13 +108,11 @@ class SpendingSummaryCard extends StatelessWidget {
 class _Stat extends StatelessWidget {
   final String label;
   final String value;
-  final Color onPrimary;
   final bool alignEnd;
 
   const _Stat({
     required this.label,
     required this.value,
-    required this.onPrimary,
     this.alignEnd = false,
   });
 
@@ -116,15 +125,16 @@ class _Stat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: onPrimary.withValues(alpha: 0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             fontSize: 12,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(
-            color: onPrimary,
+          style: const TextStyle(
+            color: Colors.white,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),

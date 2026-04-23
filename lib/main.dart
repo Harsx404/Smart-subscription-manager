@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'models/subscription.dart';
 import 'providers/subscription_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/add_subscription_screen.dart';
 import 'screens/edit_subscription_screen.dart';
 import 'screens/splash_screen.dart';
@@ -12,8 +13,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initialize();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => SubscriptionProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -24,12 +28,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return MaterialApp(
       title: 'Smart Subscription Manager',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeProvider.themeMode,
       home: const SplashScreen(),
       onGenerateRoute: (settings) {
         if (settings.name == '/add') {
